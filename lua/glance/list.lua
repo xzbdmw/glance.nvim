@@ -15,6 +15,7 @@ local winhl = {
 }
 
 local win_opts = {
+  -- previewwindow = true,
   winfixwidth = true,
   winfixheight = true,
   cursorline = true,
@@ -35,8 +36,10 @@ local buf_opts = {
 function List.create(opts)
   opts = opts or {}
   local bufnr = vim.api.nvim_create_buf(false, true)
+  opts.win_opts.zindex = 9
   local winnr = vim.api.nvim_open_win(bufnr, true, opts.win_opts)
 
+  vim.w[winnr].glance_list = true
   local list = List:new(bufnr, winnr)
   utils.win_set_options(winnr, win_opts)
   utils.buf_set_options(bufnr, buf_opts)
@@ -367,10 +370,10 @@ local function process_locations(locations, position_params, offset_encoding)
   return result
 end
 
-local function get_lsp_method_label(method_name)
+function get_lsp_method_label(method_name)
   return utils.capitalize(lsp.methods[method_name].label)
 end
-
+_G.Total_Count = 0
 function List:setup(opts)
   self.groups =
     process_locations(opts.results, opts.position_params, opts.offset_encoding)
@@ -379,10 +382,11 @@ function List:setup(opts)
 
   folds.reset()
   folds.open(group.filename)
-
+  Total_Count = #opts.results
   self:update(self.groups)
   local _, location_line = find_location_position(self.items, location)
-
+  _G.glance_listnr = #opts.results
+  _G.glance_list_method = opts.method
   if config.options.winbar.enable and self.winbar then
     self.winbar:render({
       title = string.format(
@@ -399,6 +403,10 @@ function List:setup(opts)
   end)
 end
 
+function List:get_total_count()
+  return self.total_count
+end
+
 function List:update(groups)
   utils.buf_set_options(self.bufnr, { modifiable = true, readonly = false })
   self:render(groups)
@@ -406,6 +414,9 @@ function List:update(groups)
 end
 
 function List:close()
+  if self.winnr == nil then
+    return
+  end
   if vim.api.nvim_win_is_valid(self.winnr) then
     vim.api.nvim_win_close(self.winnr, {})
   end

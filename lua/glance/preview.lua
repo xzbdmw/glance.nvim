@@ -1,11 +1,12 @@
 local config = require('glance.config')
 local utils = require('glance.utils')
 local Winbar = require('glance.winbar')
-
+local list = require('glance.list')
 local Preview = {}
 Preview.__index = Preview
 
 local touched_buffers = {}
+local cur_count_ns = vim.api.nvim_create_namespace('glance-current-count')
 
 local winhl = {
   'Normal:GlancePreviewNormal',
@@ -45,7 +46,56 @@ local float_win_opts = {
 local function clear_hl(bufnr)
   if vim.api.nvim_buf_is_valid(bufnr) then
     vim.api.nvim_buf_clear_namespace(bufnr, config.namespace, 0, -1)
+    vim.api.nvim_buf_clear_namespace(bufnr, cur_count_ns, 0, -1)
   end
+end
+
+local function cur_count_virtual_text(
+  bufnr,
+  winnr,
+  cur_index,
+  group_count,
+  total_count
+)
+  vim.api.nvim_buf_clear_namespace(bufnr, cur_count_ns, 0, -1)
+  if total_count == group_count then
+    vim.api.nvim_buf_set_extmark(
+      bufnr,
+      cur_count_ns,
+      vim.api.nvim_win_get_cursor(winnr)[1] - 1,
+      0,
+      {
+        virt_text = {
+          { '[' .. cur_index .. '/' .. group_count .. ']', 'NoiceVirtualText' },
+        },
+        virt_text_pos = 'eol',
+      }
+    )
+  else
+    vim.api.nvim_buf_set_extmark(
+      bufnr,
+      cur_count_ns,
+      vim.api.nvim_win_get_cursor(winnr)[1] - 1,
+      0,
+      {
+        virt_text = {
+          {
+            '['
+              .. cur_index
+              .. '/'
+              .. group_count
+              .. ']'
+              .. ' ['
+              .. total_count
+              .. ']',
+            'NoiceSearch',
+          },
+        },
+        virt_text_pos = 'eol',
+      }
+    )
+  end
+  vim.cmd('redraw')
 end
 
 function Preview.create(opts)
@@ -57,6 +107,22 @@ end
 
 function Preview:new(opts)
   local winnr = vim.api.nvim_open_win(opts.preview_bufnr, false, opts.win_opts)
+
+  -- local ns = vim.api.nvim_create_namespace('glance_bottom')
+  -- vim.api.nvim_buf_clear_namespace(opts.preview_bufnr, ns, 0, -1)
+  -- vim.api.nvim_win_add_ns(winnr, ns)
+  --
+  -- vim.defer_fn(function()
+  --   local last_line = vim.fn.line('w$', winnr)
+  --   -- __AUTO_GENERATED_PRINT_VAR_START__
+  --   print([==[Preview:new#function last_line:]==], vim.inspect(last_line)) -- __AUTO_GENERATED_PRINT_VAR_END__
+  --   vim.api.nvim_buf_set_extmark(opts.preview_bufnr, ns, last_line - 1, 0, {
+  --     end_line = last_line,
+  --     hl_group = 'TreesitterContextBottom',
+  --     hl_eol = true,
+  --     scoped = true,
+  --   })
+  -- end, 10)
 
   local scope = {
     winnr = winnr,
@@ -166,13 +232,16 @@ end
 
 function Preview:close()
   self:on_detach_buffer((self.current_location or {}).bufnr)
-  self:restore_win_opts()
+  -- self:restore_win_opts()
 
-  if vim.api.nvim_win_is_valid(self.winnr) then
+  if self.winnr ~= nil and vim.api.nvim_win_is_valid(self.winnr) then
     vim.api.nvim_win_close(self.winnr, {})
   end
-
   for _, bufnr in ipairs(touched_buffers) do
+    if vim.api.nvim_get_current_buf() == bufnr then
+      clear_hl(bufnr)
+      goto continue
+    end
     if vim.api.nvim_buf_is_valid(bufnr) and vim.fn.buflisted(bufnr) ~= 1 then
       if
         vim.fn.has('nvim-0.9.2') == 1
@@ -184,6 +253,7 @@ function Preview:close()
     else
       clear_hl(bufnr)
     end
+    ::continue::
   end
 
   touched_buffers = {}
@@ -222,7 +292,7 @@ function Preview:hl_buf(location)
   end
 end
 
-function Preview:update(item, group)
+function Preview:update(item, group, total_count)
   if not vim.api.nvim_win_is_valid(self.winnr) then
     return
   end
@@ -262,7 +332,19 @@ function Preview:update(item, group)
     self.winnr,
     { item.start_line + 1, item.start_col }
   )
-
+  pcall(function()
+    if vim.b[item.bufnr].ts_parse_over then
+      require('treesitter-context').context_force_update(item.bufnr, self.winnr)
+      pcall(_G.indent_update, self.winnr)
+    end
+  end)
+  cur_count_virtual_text(
+    item.bufnr,
+    self.winnr,
+    item.index,
+    #group.items,
+    _G.Total_Count
+  )
   vim.api.nvim_win_call(self.winnr, function()
     vim.cmd('norm! zv')
     vim.cmd('norm! zz')

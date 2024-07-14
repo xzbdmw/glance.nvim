@@ -4,7 +4,7 @@ local utils = require('glance.utils')
 local lsp = require('glance.lsp')
 
 local Glance = {}
-local glance = {}
+local glance = {} ---@type Glance
 Glance.__index = Glance
 local initialized = false
 
@@ -210,6 +210,7 @@ local function open(opts)
       glance.preview:clear_hl()
       glance:update_preview(glance.list:get_current_item())
       vim.api.nvim_set_current_win(glance.list.winnr)
+      FeedKeys('<Tab>', 't')
     else
       local _open = function(_results)
         _results = _results or results
@@ -224,8 +225,21 @@ local function open(opts)
       end
 
       local _jump = function(result)
-        result = result or results[1]
+        local buf = vim.api.nvim_get_current_buf()
+        local topline =
+          vim.fn.getwininfo(vim.api.nvim_get_current_win())[1].topline
+        local bottomline =
+          vim.fn.getwininfo(vim.api.nvim_get_current_win())[1].botline
         vim.lsp.util.jump_to_location(result, client.offset_encoding)
+        local new_buf = vim.api.nvim_get_current_buf()
+        local cursuorline = vim.api.nvim_win_get_cursor(0)[1]
+        if
+          new_buf == buf and (cursuorline > bottomline or cursuorline < topline)
+        then
+          require('config.utils').adjust_view(buf, 4, true)
+        else
+          require('config.utils').adjust_view(buf, 4, false)
+        end
       end
 
       local hooks = opts.hooks or config.options.hooks
@@ -241,8 +255,8 @@ end
 
 ---@class GlanceActions
 Glance.actions = {
-  close = function()
-    glance:close()
+  close = function(bufnr)
+    glance:close(bufnr)
     glance:destroy()
   end,
   enter_win = function(win)
@@ -273,7 +287,7 @@ Glance.actions = {
   end,
   next_location = function()
     local item = glance.list:next({ skip_groups = true, cycle = true })
-    glance:update_preview(item)
+    glance:update_preview(item, glance.list:get_total_count())
   end,
   previous_location = function()
     local item = glance.list:previous({ skip_groups = true, cycle = true })
@@ -341,7 +355,11 @@ Glance.actions = {
     end
     vim.fn.setqflist(qf_items, 'r')
     Glance.actions.close()
-    vim.cmd.copen()
+    if config.options.use_trouble_qf and pcall(require, 'trouble') then
+      FeedKeys('<C-q>', 'm')
+    else
+      vim.cmd.copen()
+    end
   end,
   toggle_fold = function()
     glance:toggle_fold()
@@ -388,10 +406,27 @@ function Glance:create(opts)
   return scope
 end
 
+local winhl = {
+  'Normal:GlanceListNormal',
+  'CursorLine:GlanceListCursorLine',
+  'EndOfBuffer:GlanceListEndOfBuffer',
+}
+local win_opts = {
+  winfixwidth = true,
+  winfixheight = true,
+  cursorline = true,
+  wrap = false,
+  signcolumn = 'no',
+  foldenable = false,
+  winhighlight = table.concat(winhl, ','),
+}
+
 function Glance:on_resize()
   local list_win_opts, preview_win_opts =
     get_win_opts(self.parent_winnr, self.row)
+  list_win_opts.zindex = 9
   vim.api.nvim_win_set_config(self.list.winnr, list_win_opts)
+  utils.win_set_options(self.list.winnr, win_opts)
   vim.api.nvim_win_set_config(self.preview.winnr, preview_win_opts)
 end
 
@@ -487,7 +522,14 @@ function Glance:update_preview(item)
   end
 end
 
-function Glance:close()
+function Glance:close(bufnr)
+  local hl = vim.api.nvim_get_hl_by_name('Cursor', true)
+  hl.blend = 100
+
+  vim.opt.guicursor:append('a:Cursor/lCursor')
+
+  pcall(vim.api.nvim_set_hl, 0, 'Cursor', hl)
+
   local hooks = config.options.hooks or {}
 
   if type(hooks.before_close) == 'function' then
@@ -495,16 +537,29 @@ function Glance:close()
   end
 
   if vim.api.nvim_win_is_valid(self.parent_winnr) then
+    if bufnr ~= nil then
+      local cursor = vim.api.nvim_win_get_cursor(0)
+      local lnum = cursor[1]
+      local col = cursor[2]
+      vim.api.nvim_win_set_buf(self.parent_winnr, bufnr)
+      vim.api.nvim_win_set_cursor(self.parent_winnr, { lnum, col })
+    end
     vim.api.nvim_set_current_win(self.parent_winnr)
   end
 
   vim.api.nvim_del_augroup_by_name('Glance')
-  self.list:close()
+
   self.preview:close()
+  self.list:close()
 
   if type(hooks.after_close) == 'function' then
     vim.schedule(hooks.after_close)
   end
+
+  local old_hl = hl
+  old_hl.blend = 0
+  vim.opt.guicursor:remove('a:Cursor/lCursor')
+  pcall(vim.api.nvim_set_hl, 0, 'Cursor', old_hl)
 end
 
 function Glance:destroy()
