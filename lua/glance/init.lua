@@ -489,7 +489,7 @@ function Glance:jump(opts)
     0,
     { current_item.start_line + 1, current_item.start_col }
   )
-  vim.cmd('norm! zz')
+  require('config.utils').adjust_view(0, 4)
 
   self:destroy()
 end
@@ -541,6 +541,7 @@ function Glance:close(bufnr)
     end
     vim.api.nvim_set_current_win(self.parent_winnr)
   end
+  require('config.utils').adjust_view(0, 4)
 
   vim.api.nvim_del_augroup_by_name('Glance')
 
