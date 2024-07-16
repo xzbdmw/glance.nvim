@@ -225,20 +225,15 @@ local function open(opts)
       end
 
       local _jump = function(result)
+        local cursorline = vim.api.nvim_win_get_cursor(0)[1]
         local buf = vim.api.nvim_get_current_buf()
-        local topline =
-          vim.fn.getwininfo(vim.api.nvim_get_current_win())[1].topline
-        local bottomline =
-          vim.fn.getwininfo(vim.api.nvim_get_current_win())[1].botline
         vim.lsp.util.jump_to_location(result, client.offset_encoding)
+        local new_cursorline = vim.api.nvim_win_get_cursor(0)[1]
         local new_buf = vim.api.nvim_get_current_buf()
-        local cursuorline = vim.api.nvim_win_get_cursor(0)[1]
         if
-          new_buf == buf and (cursuorline > bottomline or cursuorline < topline)
+          not (new_buf == buf and math.abs(new_cursorline - cursorline) < 5)
         then
           require('config.utils').adjust_view(buf, 4, true)
-        else
-          require('config.utils').adjust_view(buf, 4, false)
         end
       end
 
