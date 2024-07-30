@@ -351,7 +351,9 @@ Glance.actions = {
     vim.fn.setqflist(qf_items, 'r')
     Glance.actions.close()
     if config.options.use_trouble_qf and pcall(require, 'trouble') then
-      FeedKeys('<C-q>', 'm')
+      if not require('trouble').is_open('qflist') then
+        FeedKeys('<C-q>', 'm')
+      end
     else
       vim.cmd.copen()
     end
