@@ -2,6 +2,8 @@ local config = require('glance.config')
 local utils = require('glance.utils')
 local Winbar = require('glance.winbar')
 local list = require('glance.list')
+
+---@class GlancePreview
 local Preview = {}
 Preview.cur_ns = vim.api.nvim_create_namespace('glance_cur_ns')
 Preview.__index = Preview

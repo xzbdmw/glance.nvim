@@ -5,6 +5,7 @@ local Range = require('glance.range')
 local folds = require('glance.folds')
 local config = require('glance.config')
 local utils = require('glance.utils')
+---@class GlanceList
 local List = {}
 List.__index = List
 
@@ -398,6 +399,7 @@ function List:setup(opts)
   end
 
   vim.api.nvim_win_set_cursor(self.winnr, { location_line, 1 })
+  self:update(self.groups)
   vim.schedule(function()
     vim.cmd('norm! zz')
   end)
@@ -437,7 +439,7 @@ function List:destroy()
 end
 
 function List:render(groups)
-  local renderer = Renderer:new(self.bufnr)
+  local renderer = Renderer:new(self.bufnr, self.winnr)
   local icons = config.options.folds
 
   if vim.tbl_count(groups) > 1 then
