@@ -3,6 +3,7 @@ local utils = require('glance.utils')
 local Winbar = require('glance.winbar')
 local list = require('glance.list')
 local Preview = {}
+Preview.cur_ns = vim.api.nvim_create_namespace('glance_cur_ns')
 Preview.__index = Preview
 
 local touched_buffers = {}
@@ -66,7 +67,7 @@ local function cur_count_virtual_text(
       0,
       {
         virt_text = {
-          { '[' .. cur_index .. '/' .. group_count .. ']', 'NoiceVirtualText' },
+          { '[' .. cur_index .. '/' .. group_count .. ']', 'illuminatedH' },
         },
         virt_text_pos = 'eol',
       }
@@ -88,7 +89,7 @@ local function cur_count_virtual_text(
               .. ' ['
               .. total_count
               .. ']',
-            'NoiceSearch',
+            'illuminatedH',
           },
         },
         virt_text_pos = 'eol',
@@ -114,8 +115,6 @@ function Preview:new(opts)
   --
   -- vim.defer_fn(function()
   --   local last_line = vim.fn.line('w$', winnr)
-  --   -- __AUTO_GENERATED_PRINT_VAR_START__
-  --   print([==[Preview:new#function last_line:]==], vim.inspect(last_line)) -- __AUTO_GENERATED_PRINT_VAR_END__
   --   vim.api.nvim_buf_set_extmark(opts.preview_bufnr, ns, last_line - 1, 0, {
   --     end_line = last_line,
   --     hl_group = 'TreesitterContextBottom',
@@ -237,6 +236,9 @@ function Preview:close()
   if self.winnr ~= nil and vim.api.nvim_win_is_valid(self.winnr) then
     vim.api.nvim_win_close(self.winnr, {})
   end
+  for _, b in ipairs(touched_buffers) do
+    vim.api.nvim_buf_clear_namespace(b, self.cur_ns, 0, -1)
+  end
   for _, bufnr in ipairs(touched_buffers) do
     if vim.api.nvim_get_current_buf() == bufnr then
       clear_hl(bufnr)
@@ -324,7 +326,6 @@ function Preview:update(item, group, total_count)
         vim.cmd('do BufRead')
       end
     end)
-
     self:on_attach_buffer(item.bufnr)
   end
 
@@ -338,6 +339,20 @@ function Preview:update(item, group, total_count)
       pcall(_G.indent_update, self.winnr)
     end
   end)
+  vim.api.nvim_buf_clear_namespace(item.bufnr, self.cur_ns, 0, -1)
+  vim.api.nvim_buf_set_extmark(
+    item.bufnr,
+    self.cur_ns,
+    item.start_line,
+    item.start_col,
+    {
+      hl_group = 'CurSearch',
+      end_row = item.end_line,
+      end_col = item.end_col,
+      priority = 10000,
+      strict = false,
+    }
+  )
   cur_count_virtual_text(
     item.bufnr,
     self.winnr,

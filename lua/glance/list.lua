@@ -470,7 +470,31 @@ function List:render(groups)
     local _, group = next(groups)
     self:render_locations(group.items, renderer, false)
   end
-
+  local item = self:get_current_item()
+  local ns = vim.api.nvim_create_namespace('glance_cur_ns')
+  local preview_buf, preview_win
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    if vim.api.nvim_win_get_config(win).zindex == 10 then
+      preview_buf = vim.api.nvim_win_get_buf(win)
+      preview_win = win
+    end
+  end
+  if preview_buf ~= nil then
+    vim.api.nvim_buf_clear_namespace(preview_buf, ns, 0, -1)
+    vim.api.nvim_buf_set_extmark(
+      preview_buf,
+      ns,
+      item.start_line,
+      item.start_col,
+      {
+        hl_group = 'CurSearch',
+        end_row = item.end_line,
+        end_col = item.end_col,
+        priority = 10000,
+        strict = false,
+      }
+    )
+  end
   renderer:render()
   renderer:highlight()
 end
@@ -558,6 +582,7 @@ function List:next(opts)
     end
     if not (opts.skip_groups and item.is_group) then
       vim.api.nvim_win_set_cursor(self.winnr, { i, self:get_col() })
+      self:update(self.groups)
       return item
     end
   end
@@ -588,6 +613,7 @@ function List:previous(opts)
     end
     if not (opts.skip_groups and item.is_group) then
       vim.api.nvim_win_set_cursor(self.winnr, { i, self:get_col() })
+      self:update(self.groups)
       return item
     end
   end
