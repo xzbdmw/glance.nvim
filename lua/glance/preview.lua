@@ -236,7 +236,7 @@ function Preview:close()
   -- self:restore_win_opts()
 
   if self.winnr ~= nil and vim.api.nvim_win_is_valid(self.winnr) then
-    vim.api.nvim_win_close(self.winnr, {})
+    vim.api.nvim_win_close(self.winnr, true)
   end
   for _, b in ipairs(touched_buffers) do
     vim.api.nvim_buf_clear_namespace(b, self.cur_ns, 0, -1)
@@ -338,6 +338,7 @@ function Preview:update(item, group, total_count)
   pcall(function()
     if vim.b[item.bufnr].ts_parse_over then
       require('treesitter-context').context_force_update(item.bufnr, self.winnr)
+      ---@diagnostic disable-next-line: undefined-field
       pcall(_G.indent_update, self.winnr)
     end
   end)

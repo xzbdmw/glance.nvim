@@ -3,6 +3,16 @@ local highlights = require('glance.highlights')
 local utils = require('glance.utils')
 local lsp = require('glance.lsp')
 
+---@class Glance
+---@field list? GlanceList
+---@field preview? GlancePreview
+---@field parent_winnr? integer
+---@field parent_bufnr? integer
+---@field bufnr? integer
+---@field winnr? integer
+---@field params? lsp.TextDocumentPositionParams
+---@field method? GlanceMethod
+---@field offset_encoding? string
 local Glance = {}
 local glance = {} ---@type Glance
 Glance.__index = Glance
@@ -282,7 +292,7 @@ Glance.actions = {
   end,
   next_location = function()
     local item = glance.list:next({ skip_groups = true, cycle = true })
-    glance:update_preview(item, glance.list:get_total_count())
+    glance:update_preview(item)
   end,
   previous_location = function()
     local item = glance.list:previous({ skip_groups = true, cycle = true })
@@ -319,7 +329,7 @@ Glance.actions = {
     glance:jump({ cmd = 'split' })
   end,
   ---@param method GlanceMethod
-  ---@param opts? { hooks: GlanceHooks }
+  ---@param opts? { hooks: GlanceHooksOpts }
   open = function(method, opts)
     vim.validate({
       method = utils.valid_enum(
@@ -523,6 +533,7 @@ function Glance:close(bufnr)
   local hl = vim.api.nvim_get_hl_by_name('Cursor', true)
   hl.blend = 100
 
+  ---@diagnostic disable-next-line: undefined-field
   vim.opt.guicursor:append('a:Cursor/lCursor')
 
   pcall(vim.api.nvim_set_hl, 0, 'Cursor', hl)
@@ -556,6 +567,7 @@ function Glance:close(bufnr)
 
   local old_hl = hl
   old_hl.blend = 0
+  ---@diagnostic disable-next-line: undefined-field
   vim.opt.guicursor:remove('a:Cursor/lCursor')
   pcall(vim.api.nvim_set_hl, 0, 'Cursor', old_hl)
 end
