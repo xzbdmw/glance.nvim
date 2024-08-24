@@ -283,19 +283,33 @@ Glance.actions = {
     end
   end,
   next = function()
-    local item = glance.list:next()
+    local item = glance.list:next_list()
     glance:update_preview(item)
   end,
   previous = function()
-    local item = glance.list:previous()
+    local item = glance.list:previous_list()
     glance:update_preview(item)
   end,
   next_location = function()
-    local item = glance.list:next({ skip_groups = true, cycle = true })
+    local item = glance.list:next({
+      skip_groups = true,
+      cycle = true,
+      cursor = vim.api.nvim_win_get_cursor(glance.preview.winnr),
+      filename = vim.api.nvim_buf_get_name(
+        vim.api.nvim_win_get_buf(glance.preview.winnr)
+      ),
+    })
     glance:update_preview(item)
   end,
   previous_location = function()
-    local item = glance.list:previous({ skip_groups = true, cycle = true })
+    local item = glance.list:previous({
+      skip_groups = true,
+      cycle = true,
+      cursor = vim.api.nvim_win_get_cursor(glance.preview.winnr),
+      filename = vim.api.nvim_buf_get_name(
+        vim.api.nvim_win_get_buf(glance.preview.winnr)
+      ),
+    })
     glance:update_preview(item)
   end,
   preview_scroll_win = function(distance)

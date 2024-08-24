@@ -481,7 +481,7 @@ function List:render(groups)
       preview_win = win
     end
   end
-  if preview_buf ~= nil then
+  if preview_buf ~= nil and not item.is_group then
     vim.api.nvim_buf_clear_namespace(preview_buf, ns, 0, -1)
     vim.api.nvim_buf_set_extmark(
       preview_buf,
@@ -564,6 +564,65 @@ end
 
 function List:next(opts)
   opts = opts or {}
+  local main_row, main_col = unpack(opts.cursor)
+  local target_item
+  local filename = opts.filename
+  local has_other_file = false
+  for _, item in ipairs(self.items) do
+    if filename == item.filename and not item.is_group then
+      local s_row, s_col, e_row, e_col =
+        item.start_line + 1, item.start_col, item.end_line, item.end_col
+      if s_row > main_row or (s_row == main_row and s_col > main_col) then
+        target_item = item
+        break
+      end
+    end
+    if filename ~= item.filename then
+      has_other_file = true
+    end
+  end
+  if target_item == nil and has_other_file then
+    return self:next_list(opts)
+  end
+  for i, item in
+    self:walk({
+      start = 0,
+      cycle = false,
+    })
+  do
+    if
+      opts.skip_groups
+      and item.is_group
+      and folds.is_folded(item.filename)
+    then
+      self:toggle_fold(item)
+      return self:next({
+        offset = i, -- offset by how far we've already iterated prior to unfolding
+        cycle = false,
+        skip_groups = true,
+      })
+    end
+    if target_item == nil and i == vim.api.nvim_buf_line_count(self.bufnr) then
+      if self.items[1].is_group then
+        i = 2
+      else
+        i = 1
+      end
+      vim.api.nvim_win_set_cursor(self.winnr, { i, self:get_col() })
+      self:update(self.groups)
+      return self.items[i]
+    end
+    if self.items[i] == target_item then
+      vim.api.nvim_win_set_cursor(self.winnr, { i, self:get_col() })
+      self:update(self.groups)
+      return item
+    end
+  end
+  return nil
+end
+
+function List:next_list(opts)
+  opts = opts or {}
   for i, item in
     self:walk({
       start = self:get_line() + (opts.offset or 0),
@@ -590,8 +649,7 @@ function List:next(opts)
   end
   return nil
 end
-
-function List:previous(opts)
+function List:previous_list(opts)
   opts = opts or {}
   for i, item in
     self:walk({
@@ -614,6 +672,78 @@ function List:previous(opts)
       })
     end
     if not (opts.skip_groups and item.is_group) then
+      vim.api.nvim_win_set_cursor(self.winnr, { i, self:get_col() })
+      self:update(self.groups)
+      return item
+    end
+  end
+  return nil
+end
+
+function List:previous(opts)
+  opts = opts or {}
+  local main_row, main_col = unpack(opts.cursor)
+  local target_item
+  local filename = opts.filename
+  local has_other_file = false
+  local function reverse_list(list)
+    local reversed = {}
+    for i = #list, 1, -1 do
+      table.insert(reversed, list[i])
+    end
+    return reversed
+  end
+
+  local hit = false
+  local rev = reverse_list(self.items)
+  for _, item in ipairs(rev) do
+    if filename == item.filename and not item.is_group then
+      local s_row, s_col, e_row, e_col =
+        item.start_line + 1, item.start_col, item.end_line, item.end_col
+      if s_row < main_row or (s_row == main_row and s_col < main_col) then
+        target_item = item
+        break
+      end
+    end
+    if filename ~= item.filename then
+      has_other_file = true
+    end
+  end
+  if target_item == nil and has_other_file then
+    return self:previous_list(opts)
+  end
+  for i, item in
+    self:walk({
+      start = vim.api.nvim_buf_line_count(self.bufnr) + 1,
+      cycle = false,
+      backwards = true,
+    })
+  do
+    if
+      opts.skip_groups
+      and item.is_group
+      and folds.is_folded(item.filename)
+    then
+      local is_last_line = i == vim.api.nvim_buf_line_count(self.bufnr)
+      self:toggle_fold(item)
+      return self:previous({
+        offset = is_last_line and 0 or item.count, -- offset by how many new items were added after unfolding
+        cycle = false,
+        skip_groups = true,
+      })
+    end
+    local last_line = vim.api.nvim_buf_line_count(self.bufnr)
+    if target_item == nil and i == 1 then
+      if self.items[last_line].is_group then
+        i = last_line - 1
+      else
+        i = last_line
+      end
+      vim.api.nvim_win_set_cursor(self.winnr, { i, self:get_col() })
+      self:update(self.groups)
+      return self.items[i]
+    end
+    if self.items[i] == target_item then
       vim.api.nvim_win_set_cursor(self.winnr, { i, self:get_col() })
       self:update(self.groups)
       return item

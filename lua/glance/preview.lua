@@ -111,20 +111,6 @@ end
 function Preview:new(opts)
   local winnr = vim.api.nvim_open_win(opts.preview_bufnr, false, opts.win_opts)
 
-  -- local ns = vim.api.nvim_create_namespace('glance_bottom')
-  -- vim.api.nvim_buf_clear_namespace(opts.preview_bufnr, ns, 0, -1)
-  -- vim.api.nvim_win_add_ns(winnr, ns)
-  --
-  -- vim.defer_fn(function()
-  --   local last_line = vim.fn.line('w$', winnr)
-  --   vim.api.nvim_buf_set_extmark(opts.preview_bufnr, ns, last_line - 1, 0, {
-  --     end_line = last_line,
-  --     hl_group = 'TreesitterContextBottom',
-  --     hl_eol = true,
-  --     scoped = true,
-  --   })
-  -- end, 10)
-
   local scope = {
     winnr = winnr,
     bufnr = opts.preview_bufnr,
@@ -302,10 +288,6 @@ function Preview:update(item, group, total_count)
   end
 
   if not item or item.is_group or item.is_unreachable then
-    return
-  end
-
-  if vim.deep_equal(self.current_location, item) then
     return
   end
 
