@@ -72,6 +72,7 @@ local function cur_count_virtual_text(
           { '[' .. cur_index .. '/' .. group_count .. ']', 'illuminatedH' },
         },
         virt_text_pos = 'eol',
+        hl_mode = 'combine',
       }
     )
   else
@@ -83,18 +84,16 @@ local function cur_count_virtual_text(
       {
         virt_text = {
           {
-            '['
-              .. cur_index
-              .. '/'
-              .. group_count
-              .. ']'
-              .. ' ['
-              .. total_count
-              .. ']',
+            '[' .. cur_index .. '/' .. group_count .. ']',
             'illuminatedH',
+          },
+          {
+            ' ' .. total_count,
+            'CmpGhostText',
           },
         },
         virt_text_pos = 'eol',
+        hl_mode = 'combine',
       }
     )
   end
