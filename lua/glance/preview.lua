@@ -69,7 +69,9 @@ local function cur_count_virtual_text(
       0,
       {
         virt_text = {
-          { '[' .. cur_index .. '/' .. group_count .. ']', 'illuminatedH' },
+          { '[' .. cur_index, 'illuminatedH' },
+          { ' of ', 'illuminatedHItalic' },
+          { group_count .. ']', 'illuminatedH' },
         },
         virt_text_pos = 'eol',
         hl_mode = 'combine',
@@ -83,14 +85,10 @@ local function cur_count_virtual_text(
       0,
       {
         virt_text = {
-          {
-            '[' .. cur_index .. '/' .. group_count .. ']',
-            'illuminatedH',
-          },
-          {
-            ' ' .. total_count,
-            'CmpGhostText',
-          },
+          { '[' .. cur_index, 'illuminatedH' },
+          { ' of ', 'illuminatedHItalic' },
+          { group_count .. ']', 'illuminatedH' },
+          { ' ' .. total_count, 'ItalicComment' },
         },
         virt_text_pos = 'eol',
         hl_mode = 'combine',
@@ -312,11 +310,11 @@ function Preview:update(item, group, total_count)
     self:on_attach_buffer(item.bufnr)
   end
 
-  vim.api.nvim_win_set_cursor(
-    self.winnr,
-    { item.start_line + 1, item.start_col }
-  )
   pcall(function()
+    vim.api.nvim_win_set_cursor(
+      self.winnr,
+      { item.start_line + 1, item.start_col }
+    )
     if vim.b[item.bufnr].ts_parse_over then
       require('treesitter-context').context_force_update(item.bufnr, self.winnr)
       ---@diagnostic disable-next-line: undefined-field
