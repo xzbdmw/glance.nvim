@@ -544,14 +544,6 @@ function Glance:update_preview(item)
 end
 
 function Glance:close(bufnr)
-  local hl = vim.api.nvim_get_hl_by_name('Cursor', true)
-  hl.blend = 100
-
-  ---@diagnostic disable-next-line: undefined-field
-  vim.opt.guicursor:append('a:Cursor/lCursor')
-
-  pcall(vim.api.nvim_set_hl, 0, 'Cursor', hl)
-
   local hooks = config.options.hooks or {}
 
   if type(hooks.before_close) == 'function' then
@@ -578,12 +570,6 @@ function Glance:close(bufnr)
   if type(hooks.after_close) == 'function' then
     vim.schedule(hooks.after_close)
   end
-
-  local old_hl = hl
-  old_hl.blend = 0
-  ---@diagnostic disable-next-line: undefined-field
-  vim.opt.guicursor:remove('a:Cursor/lCursor')
-  pcall(vim.api.nvim_set_hl, 0, 'Cursor', old_hl)
 end
 
 function Glance:destroy()
