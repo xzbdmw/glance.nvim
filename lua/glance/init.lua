@@ -261,6 +261,7 @@ end
 ---@class GlanceActions
 Glance.actions = {
   close = function(bufnr)
+    _G.hide_cursor(function() end, 30)
     glance:close(bufnr)
     glance:destroy()
   end,
