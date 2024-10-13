@@ -299,6 +299,7 @@ Glance.actions = {
       filename = vim.api.nvim_buf_get_name(
         vim.api.nvim_win_get_buf(glance.preview.winnr)
       ),
+      glance = glance,
     })
     glance:update_preview(item)
   end,

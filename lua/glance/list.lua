@@ -600,6 +600,11 @@ function List:next(opts)
         offset = i, -- offset by how far we've already iterated prior to unfolding
         cycle = false,
         skip_groups = true,
+        cursor = vim.api.nvim_win_get_cursor(opts.glance.preview.winnr),
+        filename = vim.api.nvim_buf_get_name(
+          vim.api.nvim_win_get_buf(opts.glance.preview.winnr)
+        ),
+        glance = opts.glance,
       })
     end
     if target_item == nil and i == vim.api.nvim_buf_line_count(self.bufnr) then
@@ -639,6 +644,11 @@ function List:next_list(opts)
         offset = i - self:get_line(), -- offset by how far we've already iterated prior to unfolding
         cycle = opts.cycle,
         skip_groups = true,
+        cursor = vim.api.nvim_win_get_cursor(opts.glance.preview.winnr),
+        filename = vim.api.nvim_buf_get_name(
+          vim.api.nvim_win_get_buf(opts.glance.preview.winnr)
+        ),
+        glance = opts.glance,
       })
     end
     if not (opts.skip_groups and item.is_group) then
