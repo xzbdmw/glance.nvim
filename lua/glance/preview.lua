@@ -88,7 +88,7 @@ local function cur_count_virtual_text(
           { '[' .. cur_index, 'illuminatedH' },
           { ' of ', 'illuminatedHItalic' },
           { group_count .. ']', 'illuminatedH' },
-          { ' ' .. total_count, 'ItalicComment' },
+          { ' ' .. total_count, 'Comment' },
         },
         virt_text_pos = 'eol',
         hl_mode = 'combine',
