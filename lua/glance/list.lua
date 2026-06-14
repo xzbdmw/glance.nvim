@@ -388,6 +388,9 @@ function List:setup(opts)
   local _, location_line = find_location_position(self.items, location)
   _G.glance_listnr = #opts.results
   _G.glance_list_method = opts.method
+  vim.api.nvim_exec_autocmds('User', {
+    pattern = 'GlanceListUpdate',
+  })
   if config.options.winbar.enable and self.winbar then
     self.winbar:render({
       title = string.format(

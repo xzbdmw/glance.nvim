@@ -315,7 +315,7 @@ function Preview:update(item, group, total_count)
       self.winnr,
       { item.start_line + 1, item.start_col }
     )
-    if vim.b[item.bufnr].ts_parse_over then
+    if vim.b[item.bufnr].ts_highlight then
       require('treesitter-context').context_force_update(item.bufnr, self.winnr)
       ---@diagnostic disable-next-line: undefined-field
       pcall(_G.indent_update, self.winnr)

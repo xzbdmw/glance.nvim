@@ -261,7 +261,6 @@ end
 ---@class GlanceActions
 Glance.actions = {
   close = function(bufnr)
-    _G.hide_cursor(function() end, 30)
     glance:close(bufnr)
     glance:destroy()
   end,
@@ -378,7 +377,7 @@ Glance.actions = {
     Glance.actions.close()
     if config.options.use_trouble_qf and pcall(require, 'trouble') then
       if not require('trouble').is_open('qflist') then
-        FeedKeys('<C-q>', 'm')
+        FeedKeys('<leader>uq', 'm')
       end
     else
       vim.cmd.copen()
@@ -397,6 +396,9 @@ Glance.actions = {
 
 function Glance:create(opts)
   local row = self:scroll_into_view(opts.winnr, opts.params.position)
+  if row == -1 then
+    row = vim.api.nvim_win_get_cursor(0)[1]
+  end
   local push_tagstack = utils.create_push_tagstack(opts.winnr)
   local list_win_opts, preview_win_opts = get_win_opts(opts.winnr, row)
 
@@ -454,6 +456,9 @@ function Glance:on_resize()
 end
 
 function Glance:scroll_into_view(winnr, position)
+  if not vim.api.nvim_win_is_valid(winnr) then
+    return -1
+  end
   -- User might have moved cursor during the lsp request
   -- Set the cursor position just in case
   vim.api.nvim_win_set_cursor(winnr, { position.line + 1, position.character })
